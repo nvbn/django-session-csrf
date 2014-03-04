@@ -18,8 +18,12 @@ from django.template import context
 import mock
 
 import session_csrf
-from session_csrf import (anonymous_csrf, anonymous_csrf_exempt,
-                          CsrfMiddleware, prep_key)
+from session_csrf import (
+    anonymous_csrf, anonymous_csrf_exempt,
+    CsrfMiddleware, prep_key,
+    ANON_COOKIE,
+)
+from session_csrf import conf
 
 
 urlpatterns = patterns('',
@@ -35,11 +39,11 @@ class TestCsrfToken(django.test.TestCase):
     def setUp(self):
         self.client.handler = ClientHandler()
         User.objects.create_user('jbalogh', 'j@moz.com', 'password')
-        self.save_ANON_ALWAYS = session_csrf.ANON_ALWAYS
-        session_csrf.ANON_ALWAYS = False
+        self.save_ANON_ALWAYS = conf.ANON_ALWAYS
+        conf.ANON_ALWAYS = False
 
     def tearDown(self):
-        session_csrf.ANON_ALWAYS = self.save_ANON_ALWAYS
+        conf.ANON_ALWAYS = self.save_ANON_ALWAYS
 
     def login(self):
         assert self.client.login(username='jbalogh', password='password')
@@ -88,7 +92,7 @@ class TestCsrfMiddleware(django.test.TestCase):
 
     def test_anon_token_from_cookie(self):
         rf = django.test.RequestFactory()
-        rf.cookies['anoncsrf'] = self.token
+        rf.cookies[ANON_COOKIE] = self.token
         cache.set(prep_key(self.token), 'woo')
         request = rf.get('/')
         SessionMiddleware().process_request(request)
@@ -175,10 +179,10 @@ class TestAnonymousCsrf(django.test.TestCase):
         User.objects.create_user('jbalogh', 'j@moz.com', 'password')
         self.client.handler = ClientHandler(enforce_csrf_checks=True)
         self.save_ANON_ALWAYS = session_csrf.ANON_ALWAYS
-        session_csrf.ANON_ALWAYS = False
+        conf.ANON_ALWAYS = False
 
     def tearDown(self):
-        session_csrf.ANON_ALWAYS = self.save_ANON_ALWAYS
+        conf.ANON_ALWAYS = self.save_ANON_ALWAYS
 
     def login(self):
         assert self.client.login(username='jbalogh', password='password')
@@ -209,32 +213,32 @@ class TestAnonymousCsrf(django.test.TestCase):
         # A new anon user gets a key+token on the request and response.
         response = self.client.get('/anon')
         # Get the key from the cookie and find the token in the cache.
-        key = response.cookies['anoncsrf'].value
+        key = response.cookies[ANON_COOKIE].value
         self.assertEqual(response._request.csrf_token, cache.get(prep_key(key)))
 
     def test_existing_anon_cookie_on_request(self):
         # We reuse an existing anon cookie key+token.
         response = self.client.get('/anon')
-        key = response.cookies['anoncsrf'].value
+        key = response.cookies[ANON_COOKIE].value
         # Now check that subsequent requests use that cookie.
         response = self.client.get('/anon')
-        self.assertEqual(response.cookies['anoncsrf'].value, key)
+        self.assertEqual(response.cookies[ANON_COOKIE].value, key)
         self.assertEqual(response._request.csrf_token, cache.get(prep_key(key)))
 
     def test_new_anon_token_on_response(self):
         # The anon cookie is sent and we vary on Cookie.
         response = self.client.get('/anon')
-        self.assertIn('anoncsrf', response.cookies)
+        self.assertIn(ANON_COOKIE, response.cookies)
         self.assertEqual(response['Vary'], 'Cookie')
 
     def test_existing_anon_token_on_response(self):
         # The anon cookie is sent and we vary on Cookie, reusing the old value.
         response = self.client.get('/anon')
-        key = response.cookies['anoncsrf'].value
+        key = response.cookies[ANON_COOKIE].value
 
         response = self.client.get('/anon')
-        self.assertEqual(response.cookies['anoncsrf'].value, key)
-        self.assertIn('anoncsrf', response.cookies)
+        self.assertEqual(response.cookies[ANON_COOKIE].value, key)
+        self.assertIn(ANON_COOKIE, response.cookies)
         self.assertEqual(response['Vary'], 'Cookie')
 
     def test_anon_csrf_logout(self):
@@ -270,11 +274,11 @@ class TestAnonAlways(django.test.TestCase):
         self.rf = django.test.RequestFactory()
         User.objects.create_user('jbalogh', 'j@moz.com', 'password')
         self.client.handler = ClientHandler(enforce_csrf_checks=True)
-        self.save_ANON_ALWAYS = session_csrf.ANON_ALWAYS
-        session_csrf.ANON_ALWAYS = True
+        self.save_ANON_ALWAYS = conf.ANON_ALWAYS
+        conf.ANON_ALWAYS = True
 
     def tearDown(self):
-        session_csrf.ANON_ALWAYS = self.save_ANON_ALWAYS
+        conf.ANON_ALWAYS = self.save_ANON_ALWAYS
 
     def login(self):
         assert self.client.login(username='jbalogh', password='password')
@@ -307,17 +311,17 @@ class TestAnonAlways(django.test.TestCase):
         # A new anon user gets a key+token on the request and response.
         response = self.client.get('/')
         # Get the key from the cookie and find the token in the cache.
-        key = response.cookies['anoncsrf'].value
+        key = response.cookies[ANON_COOKIE].value
         self.assertEqual(response._request.csrf_token, cache.get(prep_key(key)))
 
     def test_existing_anon_cookie_on_request(self):
         # We reuse an existing anon cookie key+token.
         response = self.client.get('/')
-        key = response.cookies['anoncsrf'].value
+        key = response.cookies[ANON_COOKIE].value
 
         # Now check that subsequent requests use that cookie.
         response = self.client.get('/')
-        self.assertEqual(response.cookies['anoncsrf'].value, key)
+        self.assertEqual(response.cookies[ANON_COOKIE].value, key)
         self.assertEqual(response._request.csrf_token, cache.get(prep_key(key)))
         self.assertEqual(response['Vary'], 'Cookie')
 

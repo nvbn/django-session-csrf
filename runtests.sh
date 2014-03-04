@@ -36,6 +36,10 @@ INSTALLED_APPS = (
     'session_csrf',
 )
 SECRET_KEY = 'asdf'
+
+import session_csrf
+session_csrf.monkeypatch()
+
 EOF
 
 export PYTHONPATH=.
