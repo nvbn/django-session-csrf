@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import django.test
 from django import http
 try:
@@ -24,6 +25,7 @@ from session_csrf import (
     ANON_COOKIE,
 )
 from session_csrf import conf
+from session_csrf.models import Token
 
 
 urlpatterns = patterns('',
@@ -387,3 +389,62 @@ class ClientHandler(django.test.client.ClientHandler):
         # Store the request object.
         response._request = request
         return response
+
+
+class TokenModelCase(django.test.TestCase):
+    """Test case for token model"""
+
+    def setUp(self):
+        self._user = User.objects.create_user('test', 'test@test.test', 'test')
+
+    def _make_expired(self, token):
+        """Make token expired"""
+        token.created =\
+            datetime.now() - conf.CSRF_TOKEN_LIFETIME - timedelta(days=1)
+        token.save()
+        return token
+
+    def test_should_generate_token_on_first_save(self):
+        """Test that token should be generated on first save"""
+        token = Token.objects.create(owner=self._user)
+        self.assertIsNotNone(token.value)
+
+    def test_should_not_regenerate_token(self):
+        """Test that token should not regenerate token on second save"""
+        token = Token.objects.create(owner=self._user)
+        value = token.value
+        token.save()
+        self.assertEqual(token.value, value)
+
+    def test_get_expired_tokens(self):
+        """Test get expired tokens"""
+        for _ in range(5):
+            Token.objects.create(owner=self._user)
+        expired = [
+            self._make_expired(Token.objects.create(owner=self._user))
+            for _ in range(3)
+        ]
+        self.assertItemsEqual(
+            Token.objects.get_expired(), expired,
+        )
+
+    def test_has_valid_tokens(self):
+        """Test user has valid tokens"""
+        token = Token.objects.create(owner=self._user)
+        self.assertTrue(
+            Token.objects.has_valid(self._user, token.value),
+        )
+
+    def test_has_no_valid_tokens_without_token(self):
+        """Test has no valid tokens without tokens"""
+        self.assertFalse(
+            Token.objects.has_valid(self._user, 'token'),
+        )
+
+    def test_has_no_valid_token_when_expired(self):
+        """Test has not valid tokens when expired"""
+        token = Token.objects.create(owner=self._user)
+        self._make_expired(token)
+        self.assertFalse(
+            Token.objects.has_valid(self._user, token.value),
+        )
