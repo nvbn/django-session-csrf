@@ -6,8 +6,6 @@ from .utils import prep_key
 from . import conf
 
 
-
-
 class CsrfMiddleware(object):
 
     # csrf_processing_done prevents checking CSRF more than once. That could

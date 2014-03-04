@@ -10,4 +10,4 @@ def prep_key(key):
     key here in order to have a predictable length and character set.
     """
     prefixed = conf.PREFIX + key
-    return hashlib.md5(prefixed).hexdigest()
+    return hashlib.sha1(prefixed).hexdigest()
