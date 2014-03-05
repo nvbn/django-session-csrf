@@ -34,3 +34,9 @@ def anonymous_csrf_exempt(f):
     """Like @csrf_exempt but only for anonymous requests."""
     f.anonymous_csrf_exempt = True
     return f
+
+
+def per_view_csrf(fn):
+    """Require per view csrf"""
+    fn.per_view_csrf = True
+    return fn

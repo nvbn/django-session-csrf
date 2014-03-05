@@ -4,6 +4,7 @@ from django.core.cache import cache
 from django.contrib.sessions.models import Session
 from django.contrib.auth.models import User
 from ..utils import prep_key
+from ..decorators import per_view_csrf
 from .. import conf
 from .base import ClientHandler
 
@@ -193,3 +194,12 @@ class TestAnonAlways(django.test.TestCase):
             response = self.client.get('/', HTTP_COOKIE=c)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(warner.call_count, 0)
+
+
+class PerViewCsrfCase(django.test.TestCase):
+    """per_view_csrf test case"""
+
+    def test_should_add_flag(self):
+        """Decorator should add per_view_csrf_flag"""
+        view = per_view_csrf(lambda: None)
+        self.assertTrue(view.per_view_csrf)
