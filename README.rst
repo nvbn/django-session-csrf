@@ -106,6 +106,30 @@ the following setting:
         Default: False
 
 
+Per-action CSFR tokens
+----------------------
+
+For using per-action CSRF tokens you need decorate your view:
+
+.. code-block:: python
+
+    from session_csrf.decorators import per_view_csrf
+
+    @per_view_csrf
+    def your_view(request):
+        pass
+
+And add template tag in your template:
+
+.. code-block:: html+django
+
+    {% load session_csrf %}
+
+    <form>
+        {% per_view_csrf "app.views.your_view" %}
+    </form>
+
+
 Why do I want this?
 -------------------
 
