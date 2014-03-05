@@ -17,6 +17,16 @@ class CsrfMiddleware(object):
     def _reject(self, request, reason):
         return django_csrf._get_failure_view()(request, reason)
 
+    def _has_valid_csrf(self, request):
+        """Is request has valid csrf token"""
+        if 'csrf_token' not in request.session:
+            return False
+        else:
+            return Token.objects.has_valid(
+                request.user,
+                request.session['csrf_token']
+            )
+
     def process_request(self, request):
         """
         Add a CSRF token to the session for logged-in users.
@@ -26,11 +36,11 @@ class CsrfMiddleware(object):
         if hasattr(request, 'csrf_token'):
             return
         if request.user.is_authenticated():
-            if 'csrf_token' not in request.session:
+            if self._has_valid_csrf(request):
+                request.csrf_token = request.session['csrf_token']
+            else:
                 token = Token.objects.create(owner=request.user).value
                 request.csrf_token = request.session['csrf_token'] = token
-            else:
-                request.csrf_token = request.session['csrf_token']
         else:
             key = None
             token = ''
