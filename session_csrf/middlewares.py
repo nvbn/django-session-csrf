@@ -2,6 +2,7 @@ from django.core.cache import cache
 from django.middleware import csrf as django_csrf
 from django.utils import crypto
 from django.utils.cache import patch_vary_headers
+from .models import Token
 from .utils import prep_key
 from . import conf
 
@@ -26,7 +27,7 @@ class CsrfMiddleware(object):
             return
         if request.user.is_authenticated():
             if 'csrf_token' not in request.session:
-                token = django_csrf._get_new_csrf_key()
+                token = Token.objects.create(owner=request.user).value
                 request.csrf_token = request.session['csrf_token'] = token
             else:
                 request.csrf_token = request.session['csrf_token']
@@ -73,10 +74,11 @@ class CsrfMiddleware(object):
             user_token = request.META.get('HTTP_X_CSRFTOKEN', '')
 
         request_token = getattr(request, 'csrf_token', '')
-
         # Check that both strings aren't empty and then check for a match.
         if not ((user_token or request_token)
-                and crypto.constant_time_compare(user_token, request_token)):
+                and crypto.constant_time_compare(user_token, request_token))\
+                or (request.user.is_authenticated()
+                    and not Token.objects.has_valid(request.user, request_token)):
             reason = django_csrf.REASON_BAD_TOKEN
             django_csrf.logger.warning(
                 'Forbidden (%s): %s' % (reason, request.path),

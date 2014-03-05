@@ -36,6 +36,14 @@ urlpatterns = patterns('',
 )
 
 
+def _make_expired(token):
+    """Make token expired"""
+    token.created =\
+        datetime.now() - conf.CSRF_TOKEN_LIFETIME - timedelta(days=1)
+    token.save()
+    return token
+
+
 class TestCsrfToken(django.test.TestCase):
 
     def setUp(self):
@@ -90,6 +98,7 @@ class TestCsrfMiddleware(django.test.TestCase):
         self.mw = CsrfMiddleware()
 
     def process_view(self, request, view=None):
+        request.session = {}
         return self.mw.process_view(request, view, None, None)
 
     def test_anon_token_from_cookie(self):
@@ -170,6 +179,39 @@ class TestCsrfMiddleware(django.test.TestCase):
         for processor in context.get_standard_processors():
             ctx.update(processor(request))
         self.assertEqual(ctx['csrf_token'], self.token)
+
+    def _authenticated_request(self, user, token=None, **kwargs):
+        """Create mocked request object for authenticated user"""
+        user.is_authenticated = lambda: True
+        if token is None:
+            token = Token.objects.create(owner=user).value
+        return mock.MagicMock(
+            csrf_token=token,
+            user=user,
+            POST={},
+            META={'HTTP_X_CSRFTOKEN': token},
+            csrf_processing_done=False,
+            _dont_enforce_csrf_checks=False,
+            **kwargs)
+
+    def test_reject_for_wrong_token_if_authenticated(self):
+        """Test reject for wrong token if authenticated"""
+        user = User.objects.create()
+        request = self._authenticated_request(user, 'wrong')
+        self.assertIsNotNone(self.process_view(request))
+
+    def test_reject_when_token_expired(self):
+        """Test reject when csrf token expired"""
+        user = User.objects.create()
+        token = _make_expired(Token.objects.create(owner=user))
+        request = self._authenticated_request(user, token.value)
+        self.assertIsNotNone(self.process_view(request))
+
+    def test_accept_when_token_is_ok(self):
+        """Test accept when token is ok"""
+        user = User.objects.create()
+        request = self._authenticated_request(user)
+        self.assertIsNone(self.process_view(request))
 
 
 class TestAnonymousCsrf(django.test.TestCase):
@@ -397,13 +439,6 @@ class TokenModelCase(django.test.TestCase):
     def setUp(self):
         self._user = User.objects.create_user('test', 'test@test.test', 'test')
 
-    def _make_expired(self, token):
-        """Make token expired"""
-        token.created =\
-            datetime.now() - conf.CSRF_TOKEN_LIFETIME - timedelta(days=1)
-        token.save()
-        return token
-
     def test_should_generate_token_on_first_save(self):
         """Test that token should be generated on first save"""
         token = Token.objects.create(owner=self._user)
@@ -421,7 +456,7 @@ class TokenModelCase(django.test.TestCase):
         for _ in range(5):
             Token.objects.create(owner=self._user)
         expired = [
-            self._make_expired(Token.objects.create(owner=self._user))
+            _make_expired(Token.objects.create(owner=self._user))
             for _ in range(3)
         ]
         self.assertItemsEqual(
@@ -444,7 +479,7 @@ class TokenModelCase(django.test.TestCase):
     def test_has_no_valid_token_when_expired(self):
         """Test has not valid tokens when expired"""
         token = Token.objects.create(owner=self._user)
-        self._make_expired(token)
+        _make_expired(token)
         self.assertFalse(
             Token.objects.has_valid(self._user, token.value),
         )

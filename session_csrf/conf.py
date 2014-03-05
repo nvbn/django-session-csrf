@@ -8,5 +8,5 @@ ANON_ALWAYS = getattr(settings, 'ANON_ALWAYS', False)
 PREFIX = 'sessioncsrf:'
 
 CSRF_TOKEN_LIFETIME = getattr(
-    settings, 'CSRF_TOKEN_LIFETIME', timedelta(hours=1),
+    settings, 'CSRF_TOKEN_LIFETIME', timedelta(days=1),
 )
