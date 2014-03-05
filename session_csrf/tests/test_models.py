@@ -54,3 +54,10 @@ class TokenModelCase(django.test.TestCase):
         self.assertFalse(
             Token.objects.has_valid(self._user, token.value),
         )
+
+    def test_has_valid_token_for_view(self):
+        """Test has valid token for view"""
+        token = Token.objects.create(owner=self._user, for_view='test')
+        self.assertTrue(
+            Token.objects.has_valid(self._user, token.value, 'test'),
+        )

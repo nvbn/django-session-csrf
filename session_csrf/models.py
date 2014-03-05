@@ -17,10 +17,10 @@ class TokenManager(models.Manager):
         """Get expired tokens"""
         return self.filter(created__lt=self._expiration_date)
 
-    def has_valid(self, owner, value):
+    def has_valid(self, owner, value, for_view=None):
         """Has valid token with user and value"""
         return self.filter(
-            owner=owner, value=value,
+            owner=owner, value=value, for_view=for_view,
             created__gte=self._expiration_date,
         ).exists()
 
@@ -31,6 +31,10 @@ class Token(models.Model):
     owner = models.ForeignKey(User, verbose_name=_('owner'))
     created = models.DateTimeField(
         auto_now_add=True, verbose_name=_('created'),
+    )
+    for_view = models.CharField(
+        null=True, blank=True,
+        max_length=255, verbose_name=_('for view'),
     )
 
     objects = TokenManager()
