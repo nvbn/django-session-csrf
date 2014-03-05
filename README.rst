@@ -13,7 +13,7 @@ Installation
 
 From PyPI::
 
-    pip install django-session-csrf
+    pip install django-session-csrf-per-view
 
 From github::
 

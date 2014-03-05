@@ -5,15 +5,17 @@ ROOT = os.path.abspath(os.path.dirname(__file__))
 
 
 setup(
-    name='django-session-csrf',
+    name='django-session-csrf-per-view',
     version='0.5',
     description='CSRF protection for Django without cookies.',
     long_description=open(os.path.join(ROOT, 'README.rst')).read(),
     author='Jeff Balogh',
     author_email='jbalogh@mozilla.com',
+    maintainer='Vladimir Iakovlev',
+    maintainer_email='nvbn.rm@gmail.com',
     url='http://github.com/mozilla/django-session-csrf',
     license='BSD',
-    packages=find_packages(),
+    packages=find_packages(exclude=['example']),
     include_package_data=True,
     install_requires=['django'],
     zip_safe=False,
