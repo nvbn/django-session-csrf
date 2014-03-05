@@ -119,6 +119,20 @@ For using per-action CSRF tokens you need decorate your view:
     def your_view(request):
         pass
 
+Or for class-based views:
+
+.. code-block:: python
+
+    from django.utils.decorators import method_decorator
+    from django.views.generic import TemplateView
+    from session_csrf.decorators import per_view_csrf
+
+    class YourView(TemplateView):
+
+        @method_decorator(per_view_csrf)
+        def dispatch(self, request, *args, **kwargs):
+            return super(YourView, self).dispatch(request, *args, **kwargs)
+
 And add template tag in your template:
 
 .. code-block:: html+django

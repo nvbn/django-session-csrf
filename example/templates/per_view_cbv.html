@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+{% load session_csrf %}
+<html>
+<head>
+    <title></title>
+</head>
+<body>
+    <a href="/">Back</a>
+    <br />
+    <form method="POST">
+        {% per_view_csrf "example.views.PerViewCheck" %}
+        <button type="submit">Should be ok with per-view csrf</button>
+    </form>
+    <form method="POST">
+        {% csrf_token %}
+        <button type="submit">Should fail with csrf</button>
+    </form>
+    <form method="POST">
+        <button type="submit">Should fail without</button>
+    </form>
+</body>
+</html>
