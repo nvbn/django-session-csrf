@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+</head>
+<body>
+    <a href="/">Back</a>
+    <br />
+    <form method="POST">
+        {% csrf_token %}
+        <button type="submit">Should be ok with csrf</button>
+    </form>
+    <form method="POST">
+        <button type="submit">Should fail without</button>
+    </form>
+</body>
+</html>
