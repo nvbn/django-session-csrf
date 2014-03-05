@@ -9,8 +9,13 @@ from django.contrib.auth import logout
 from django.core import signals
 from django.core.handlers.wsgi import WSGIRequest
 from django.db import close_connection
-from ..decorators import anonymous_csrf, anonymous_csrf_exempt
+from ..decorators import anonymous_csrf, anonymous_csrf_exempt, per_view_csrf
 from .. import conf
+
+
+@per_view_csrf
+def per_view(request):
+    return http.HttpResponse()
 
 
 urlpatterns = patterns('',
@@ -18,6 +23,7 @@ urlpatterns = patterns('',
     ('^anon$', anonymous_csrf(lambda r: http.HttpResponse())),
     ('^no-anon-csrf$', anonymous_csrf_exempt(lambda r: http.HttpResponse())),
     ('^logout$', anonymous_csrf(lambda r: logout(r) or http.HttpResponse())),
+    ('^per-view$', per_view)
 )
 
 

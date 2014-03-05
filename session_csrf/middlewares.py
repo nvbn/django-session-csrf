@@ -56,7 +56,26 @@ class CsrfMiddleware(object):
                 cache.set(prep_key(key), token, conf.ANON_TIMEOUT)
             request.csrf_token = token
 
-    def process_view(self, request, view_func, args, kwargs):
+    def _check_per_view_csrf(self, request, view, user_token):
+        """Check per view csrf token"""
+        view_full_name = '{}.{}'.format(
+            view.__module__,
+            view.__name__,
+        )
+        return Token.objects.has_valid(
+            request.user, user_token, view_full_name)
+
+    def _need_per_view_csrf(self, request, view):
+        """Is view need per-view csrf token"""
+        if (
+            view and request.user.is_authenticated()
+            and hasattr(view, 'per_view_csrf')
+        ):
+            return True
+        else:
+            return False
+
+    def process_view(self, request, view_func, *args, **kwargs):
         """Check the CSRF token if this is a POST."""
         if getattr(request, 'csrf_processing_done', False):
             return
@@ -82,6 +101,12 @@ class CsrfMiddleware(object):
         user_token = request.POST.get('csrfmiddlewaretoken', '')
         if user_token == '':
             user_token = request.META.get('HTTP_X_CSRFTOKEN', '')
+
+        if self._need_per_view_csrf(request, view_func):
+            if self._check_per_view_csrf(request, view_func, user_token):
+                return self._accept(request)
+            else:
+                return self._reject(request, django_csrf.REASON_BAD_TOKEN)
 
         request_token = getattr(request, 'csrf_token', '')
         # Check that both strings aren't empty and then check for a match.

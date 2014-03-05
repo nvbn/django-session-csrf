@@ -206,3 +206,38 @@ class TestCsrfMiddleware(django.test.TestCase):
         del request.csrf_token
         self.mw.process_request(request)
         self.assertIsNotNone(request.csrf_token)
+
+
+class TestPerViewCsrf(django.test.TestCase):
+    """Per view csrf test case"""
+
+    def setUp(self):
+        self.user = User.objects.create_user('test', 'test@test.test', 'test')
+        self.client.handler = ClientHandler()
+        self.client.login(username='test', password='test')
+
+    def _get_token(self):
+        return Token.objects.create(
+            owner=self.user,
+            for_view="session_csrf.tests.base.per_view",
+        )
+
+    def test_ok_with_correct_per_view_csrf(self):
+        """Test response is ok with correct per-view csrf"""
+        response = self.client.post('/per-view', {
+            'csrfmiddlewaretoken': self._get_token().value,
+        })
+        self.assertEqual(response.status_code, 200)
+
+    def test_not_ok_with_expired_csrf_token(self):
+        """Test not ok with expired csrf token"""
+        token = make_expired(self._get_token())
+        response = self.client.post('/per-view', {
+            'csrfmiddlewaretoken': token.value,
+        })
+        self.assertEqual(response.status_code, 403)
+
+    def test_not_ok_without_token(self):
+        """Test not ok without token"""
+        response = self.client.post('/per-view')
+        self.assertEqual(response.status_code, 403)
