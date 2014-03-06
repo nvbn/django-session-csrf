@@ -62,7 +62,6 @@ class CsrfMiddleware(object):
             view.__module__,
             view.__name__,
         )
-        print view_full_name
         return Token.objects.has_valid(
             request.user, user_token, view_full_name)
 
