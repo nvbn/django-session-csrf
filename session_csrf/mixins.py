@@ -1,10 +1,11 @@
-from django.utils.decorators import method_decorator
-from .decorators import per_view_csrf
+from django.utils.decorators import classonlymethod
 
 
 class PerViewCsrfMixin(object):
     """Per view csrf mixin"""
 
-    @method_decorator(per_view_csrf)
-    def dispatch(self, *args, **kwargs):
-        return super(PerViewCsrfMixin, self).dispatch(*args, **kwargs)
+    @classonlymethod
+    def as_view(cls, *args, **kwargs):
+        view = super(PerViewCsrfMixin, cls).as_view(*args, **kwargs)
+        view.per_view_csrf = True
+        return view
